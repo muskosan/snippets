@@ -1,0 +1,87 @@
+<!--
+  Embedded FastSpring popup store for Mylio
+  Dynamically build the dom script with a different popup store depending on the url
+  Build the store session object, and push
+  Includes Impact Tracking, and 
+-->
+
+<script>
+
+  const storePop = urlParams.has('personal') ? 'personal' : 'business';
+  const product = urlParams.has('extended') ? 'myph-lic-pers-1-year-trial-14-day' : 'myph-lic-pers-1-year-trial-7-day';
+
+  // Dynamically load FastSpring script with popup settings
+  const fsScript = document.createElement('script');
+  fsScript.id = 'fsc-api';
+  fsScript.src = 'https://sbl.onfastspring.com/sbl/0.9.6/fastspring-builder.min.js';
+  fsScript.type = 'text/javascript';
+  fsScript.dataset.popupClosed = 'onFSPopupClosed';
+  fsScript.dataset.storefront = 'abc.def.com/popup-${storePop}';
+  fsScript.dataset.decorateCallback = 'decorateURL';
+  document.head.appendChild(fsScript);
+
+  // Callback when popup is closed
+  function onFSPopupClosed(orderReference) {
+    const firstName = sessionStorage.getItem('First') || '';
+    const lastName = sessionStorage.getItem('Last') || '';
+    const email = sessionStorage.getItem('Email') || '';
+    const phone = sessionStorage.getItem('Phone') || '';
+
+    if (orderReference) {
+      const redirectUrl = `/schedule-onboarding?firstname=${encodeURIComponent(firstName)}&lastname=${encodeURIComponent(lastName)}&email=${encodeURIComponent(email)}`;
+      window.location.href = redirectUrl;
+    }
+  }
+
+  // Impact tracking decorator
+  function decorateURL(url) {
+    const irClickID = localStorage.getItem('irClickID');
+    if (irClickID) {
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}irClickID=${encodeURIComponent(irClickID)}`;
+    }
+
+    if (window.clsid) {
+      const { client_id, session_id } = window.clsid;
+      return `${url}?clientId=${encodeURIComponent(client_id)}&sessionId=${encodeURIComponent(session_id)}`;
+    }
+
+    return url;
+  }
+
+  // Purchase click handler
+  function pushPop() {
+    sessionStorage.setItem('productType', 'pro');
+
+    const session = {
+      reset: true,
+      products: [
+        { path: product, quantity: 1 }
+      ],
+      paymentContact: {
+        email: sessionStorage.getItem('Email'),
+        firstName: sessionStorage.getItem('First'),
+        lastName: sessionStorage.getItem('Last')
+      },
+      tags: {
+        landing_page: sessionStorage.getItem('firstVisit'),
+        lead_email: sessionStorage.getItem('Email')
+      }
+    };
+
+    // Add Secure Cloud product
+    fastspring.builder.add('storage-lic-2tb-1-month-trial-62-day');
+
+    // Push session and trigger checkout
+    fastspring.builder.push(session);
+    fastspring.builder.checkout();
+  }
+</script>
+
+<!-- Purchase button -->
+<a
+  class="buy-cta starter buy cta-button purchase-button"
+  onclick="pushPop();"
+>
+  GET STARTED
+</a>
