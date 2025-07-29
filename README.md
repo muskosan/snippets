@@ -1,2 +1,2 @@
 # snippets
-Various code sample snippets coded over the years
+Various code sample snippets created over the years
